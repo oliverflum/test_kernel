@@ -62,24 +62,68 @@ let rec json_to_vtype (js: JS.t) =
   | `List l -> VList (List.map json_to_vtype l) 
   | _ -> raise UnsupportedType
 
-class webStore ctx resolver uuid = 
+class webStore ctx resolver repo uuid password= 
   let ctx = Cohttp_mirage.Client.ctx resolver ctx in
   object (self)
     val store_ctx = ctx
+    val repo = repo
     val uuid = uuid
+    val password = password
     val mutable map = StringMap.empty
+    val mutable token = ""
 
-    method private http_get (uri: Uri.t) =  
-      Cohttp_mirage.Client.get ~ctx:store_ctx uri >>= fun (response, body) ->
-      Cohttp_lwt.Body.to_string body
-
-    method private http_post (uri: Uri.t) (body: string) =
-      let body = Cohttp_lwt.Body.of_string body in
+    
+    method private login = 
+      let uri = Uri.of_string (repo ^ "/unikernel/login") in
+      let body_str = "{ \"uuid\": " ^ uuid ^ ", \"password\": " ^ password ^"}" in
+      let body = Cohttp_lwt.Body.of_string body_str in
       let headers = Cohttp.Header.init_with "Content-Type" "application/json" in
       Cohttp_mirage.Client.post ~ctx:store_ctx ~body ~headers uri >>= fun (response, body) ->
-      Lwt.return response.status
+      let code = response |> Cohttp.Response.status |> Cohttp.Code.code_of_status in
+      Cohttp_lwt.Body.to_string body >>= fun body_str ->
+      if code == 200 then begin
+        Logs.info (fun m -> m "Logged in to repo");
+        let json = JS.from_string body_str in 
+        token <- (JS.Util.to_string (JS.Util.member "token" json));
+        Lwt.return true
+      end else begin
+        Logs.info (fun m -> m "Could not login to repo: %n" code);
+        Lwt.return false 
+      end
 
-    method private map_to_json =
+    method private get_store =  
+      let uri = Uri.of_string (repo ^ "/store") in
+      let headers = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
+      Cohttp_mirage.Client.get ~ctx:store_ctx ~headers uri >>= fun (response, body) ->
+      let code = response |> Cohttp.Response.status |> Cohttp.Code.code_of_status in
+      Cohttp_lwt.Body.to_string body >>= fun body_str ->
+      if code == 200 then begin
+        Logs.info (fun m -> m "Got store: %s" body_str);
+        let json = JS.from_string body_str in 
+        self#store_all json;
+        Lwt.return true
+      end else begin
+        Logs.info (fun m -> m "Could not retrieve store: %n" code);
+        Lwt.return false 
+      end
+
+    method private post_store =
+      let uri = Uri.of_string (repo ^ "/store") in
+      let body_str = self#map_to_json_string in
+      let body = Cohttp_lwt.Body.of_string body_str in
+      let h1 = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
+      let headers = Cohttp.Header.add h1 "Content-Type" "application/json" in
+      Cohttp_mirage.Client.post ~ctx:store_ctx ~body ~headers uri >>= fun (response, body) ->
+      let code = response |> Cohttp.Response.status |> Cohttp.Code.code_of_status in
+      if code == 200 then begin
+        Logs.info (fun m -> m "Wrote store to repo");
+        Lwt.return true
+      end else begin
+        Logs.info (fun m -> m "Could not write store: %n" code);
+        Lwt.return false 
+      end 
+
+    method private map_to_json_string =
       let js_map = StringMap.map (fun v -> (vtype_to_json v)) map in
       let l = List.of_seq (StringMap.to_seq js_map) in
       let json = `Assoc l in 
@@ -97,37 +141,28 @@ class webStore ctx resolver uuid =
         self#set key def;
         def
 
-    method set (key: string) (value: vtype) = 
+    method set (key: string) (value: vtype) =
       map <- StringMap.add key value map
 
     method suspend = 
-      OS.Xs.make () >>= fun client ->
-      OS.Xs.(immediate client (fun h -> directory h "data")) >>= fun dir -> 
-      if List.mem "target_url" dir then begin
-        OS.Xs.(immediate client (fun h -> read h "data/target_url")) >>= fun target_uri ->
-        OS.Xs.(immediate client (fun h -> read h "name")) >>= fun name ->
-        let uri = Uri.of_string (target_uri^"/store?uuid="^uuid^"&name="^name) in
-        let body = self#map_to_json in
-        self#http_post uri body >>= fun _ ->
+      if token <> "" then begin
+        self#post_store >>= fun _ ->
         OS.Sched.shutdown OS.Sched.Poweroff;
         Lwt.return ()
       end else begin
         OS.Sched.shutdown OS.Sched.Poweroff;
         Lwt.return ()
       end
-
-    method init (origin_uri: string) =
-      Logs.info (fun m -> m "origin_uri: %s" origin_uri);
-      if origin_uri == "" then Lwt.return ()
+      
+    method init =
+      if repo == "" then Lwt.return false
       else begin 
-        let uri = Uri.of_string (origin_uri^"/store?uuid="^uuid) in
-        self#http_get uri >>= fun body_str ->
-        Logs.info (fun m -> m "body_str: %s" body_str);
-        if body_str <> "" then
-          let json = JS.from_string body_str in 
-          self#store_all json;
-          Lwt.return ()
-        else 
-          Lwt.return ()
+        Logs.info (fun m -> m "repo: %s" repo);
+        self#login >>= fun logged_in ->
+        if logged_in then begin
+          self#get_store >>= fun _ ->
+          Lwt.return true
+        end else 
+          Lwt.return false
       end
   end 

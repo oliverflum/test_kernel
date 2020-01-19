@@ -18,7 +18,7 @@ module Main (T: TIME) (RES: Resolver_lwt.S) (CON: Conduit_mirage.S) = struct
     in
     loop (Store.to_int (store#get "count" (Store.VInt 0)))
 
-  let logic store =
+  let logic =
     OS.Xs.make () >>= fun client ->
     let rec inner () = 
       OS.Xs.(immediate client (fun h -> directory h "control")) >>= fun dir -> 
@@ -54,9 +54,10 @@ module Main (T: TIME) (RES: Resolver_lwt.S) (CON: Conduit_mirage.S) = struct
     in inner ()
   
   let start _time res (ctx:CON.t) =
-    let store = new Store.webStore ctx res (Key_gen.uuid ()) in
-    store#init (Key_gen.origin_uri ()) >>= fun () ->
-    let l = logic store in 
+    let store = new Store.webStore ctx res 
+      (Key_gen.repo ()) (Key_gen.uuid ()) (Key_gen.password ()) in
+    store#init >>= fun logged_in ->
+    let l = logic in 
     let f = functionality store in
     Lwt.pick [l;f] >>= fun suspended ->
     if suspended then store#suspend

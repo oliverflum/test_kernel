@@ -1,17 +1,21 @@
 open Mirage
 
-let origin_uri =
-  let doc = Key.Arg.info ~doc:"URL restore from" ["origin_uri"] in
-  Key.(create "origin_uri" Arg.(opt string "" doc))
+let repo =
+  let doc = Key.Arg.info ~doc:"URL restore from" ["repo"] in
+  Key.(create "repo" Arg.(opt string "" doc))
 
 let uuid =
   let doc = Key.Arg.info ~doc:"Kernels UUID in store-repo" ["uuid"] in
   Key.(create "uuid" Arg.(opt string "0" doc))
 
+let password =
+  let doc = Key.Arg.info ~doc:"Kernels UUID in store-repo" ["password"] in
+  Key.(create "password" Arg.(opt string "0" doc))
+
 let main =
   let packages = [ package "cohttp-mirage"; package "duration"; package "yojson" ] in
   foreign
-    ~keys:[Key.abstract origin_uri; Key.abstract uuid]
+    ~keys:[Key.abstract repo; Key.abstract uuid; Key.abstract password]
     ~packages
     "Unikernel.Main" @@ time @-> resolver @-> conduit @-> job
 
