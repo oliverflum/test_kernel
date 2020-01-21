@@ -25,7 +25,8 @@ module Main (T: TIME) (RES: Resolver_lwt.S) (CON: Conduit_mirage.S) = struct
       begin if List.mem "shutdown" dir 
         then begin
           OS.Xs.(immediate client (fun h -> read h "control/shutdown")) >>= fun msg ->
-          Logs.info (fun m -> m "Got control message: %s" msg);
+          if msg <> "" then 
+            Logs.info (fun m -> m "Got control message: %s" msg);
           match msg with
           | "suspend" -> 
             Lwt.return true
@@ -56,7 +57,7 @@ module Main (T: TIME) (RES: Resolver_lwt.S) (CON: Conduit_mirage.S) = struct
   let start _time res (ctx:CON.t) =
     let store = new Store.webStore ctx res 
       (Key_gen.repo ()) (Key_gen.uuid ()) (Key_gen.password ()) in
-    store#init >>= fun logged_in ->
+    store#init >>= fun _ ->
     let l = logic in 
     let f = functionality store in
     Lwt.pick [l;f] >>= fun suspended ->

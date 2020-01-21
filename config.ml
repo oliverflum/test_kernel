@@ -9,7 +9,7 @@ let uuid =
   Key.(create "uuid" Arg.(opt string "0" doc))
 
 let password =
-  let doc = Key.Arg.info ~doc:"Kernels UUID in store-repo" ["password"] in
+  let doc = Key.Arg.info ~doc:"Kernels password in store-repo" ["password"] in
   Key.(create "password" Arg.(opt string "0" doc))
 
 let main =

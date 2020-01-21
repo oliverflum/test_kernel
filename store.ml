@@ -72,10 +72,9 @@ class webStore ctx resolver repo uuid password=
     val mutable map = StringMap.empty
     val mutable token = ""
 
-    
     method private login = 
       let uri = Uri.of_string (repo ^ "/unikernel/login") in
-      let body_str = "{ \"uuid\": " ^ uuid ^ ", \"password\": " ^ password ^"}" in
+      let body_str = "{ \"uuid\": \"" ^ uuid ^ "\", \"password\": \"" ^ password ^"\"}" in
       let body = Cohttp_lwt.Body.of_string body_str in
       let headers = Cohttp.Header.init_with "Content-Type" "application/json" in
       Cohttp_mirage.Client.post ~ctx:store_ctx ~body ~headers uri >>= fun (response, body) ->
@@ -100,7 +99,8 @@ class webStore ctx resolver repo uuid password=
       if code == 200 then begin
         Logs.info (fun m -> m "Got store: %s" body_str);
         let json = JS.from_string body_str in 
-        self#store_all json;
+        let store = JS.Util.member "store" json in
+        self#store_all store;
         Lwt.return true
       end else begin
         Logs.info (fun m -> m "Could not retrieve store: %n" code);
@@ -126,7 +126,7 @@ class webStore ctx resolver repo uuid password=
     method private map_to_json_string =
       let js_map = StringMap.map (fun v -> (vtype_to_json v)) map in
       let l = List.of_seq (StringMap.to_seq js_map) in
-      let json = `Assoc l in 
+      let json = `Assoc [("store", `Assoc l)] in 
       JS.pretty_to_string json
 
     method private store_all (json: Yojson.Basic.t) =
