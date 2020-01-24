@@ -5,7 +5,7 @@ module Main (T: TIME) (RES: Resolver_lwt.S) (CON: Conduit_mirage.S) = struct
   
   let functionality store = 
     let rec loop = function
-      | 1000 -> Lwt.return false
+      | 200 -> Lwt.return false
       | n ->
         if n = 0 
           then 
