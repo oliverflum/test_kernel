@@ -62,7 +62,7 @@ let rec json_to_vtype (js: JS.t) =
   | `List l -> VList (List.map json_to_vtype l) 
   | _ -> raise UnsupportedType
 
-class webStore ctx resolver repo uuid password= 
+class webStore ctx resolver repo uuid password = 
   let ctx = Cohttp_mirage.Client.ctx resolver ctx in
   object (self)
     val store_ctx = ctx
@@ -122,7 +122,21 @@ class webStore ctx resolver repo uuid password=
         Logs.info (fun m -> m "Could not write store: %n" code);
         Lwt.return false 
       end 
-
+    
+    method private post_terminate =
+      let uri = Uri.of_string (repo ^ "/unikernel/terminate") in
+      let h1 = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
+      let headers = Cohttp.Header.add h1 "Content-Type" "application/json" in
+      Cohttp_mirage.Client.post ~ctx:store_ctx ~headers uri >>= fun (response, body) ->
+      let code = response |> Cohttp.Response.status |> Cohttp.Code.code_of_status in
+      if code == 200 then begin
+        Logs.info (fun m -> m "Terminated self in manager");
+        Lwt.return true
+      end else begin
+        Logs.info (fun m -> m "Could not terminate self: %n. Unikernel will be shown alive in Manager" code);
+        Lwt.return false 
+      end 
+    
     method private map_to_json_string =
       let js_map = StringMap.map (fun v -> (vtype_to_json v)) map in
       let l = List.of_seq (StringMap.to_seq js_map) in
@@ -144,12 +158,24 @@ class webStore ctx resolver repo uuid password=
     method set (key: string) (value: vtype) =
       map <- StringMap.add key value map
 
+    method terminate = 
+      if token <> "" then begin
+        self#post_terminate >>= fun _ ->
+        OS.Sched.shutdown OS.Sched.Poweroff;
+        Lwt.return ()
+      end else begin
+        Logs.info (fun m -> m "Not logged in to Repo. Shutting down without terminating on server");
+        OS.Sched.shutdown OS.Sched.Poweroff;
+        Lwt.return ()
+      end
+
     method suspend = 
       if token <> "" then begin
         self#post_store >>= fun _ ->
         OS.Sched.shutdown OS.Sched.Poweroff;
         Lwt.return ()
       end else begin
+        Logs.info (fun m -> m "Not logged in to Repo. Shutting down without suspending state");
         OS.Sched.shutdown OS.Sched.Poweroff;
         Lwt.return ()
       end
@@ -157,7 +183,7 @@ class webStore ctx resolver repo uuid password=
     method init =
       if repo == "" then Lwt.return false
       else begin 
-        Logs.info (fun m -> m "repo: %s" repo);
+        Logs.info (fun m -> m "Loggin in to: %s" repo);
         self#login >>= fun logged_in ->
         if logged_in then begin
           self#get_store >>= fun _ ->

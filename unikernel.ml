@@ -62,8 +62,5 @@ module Main (T: TIME) (RES: Resolver_lwt.S) (CON: Conduit_mirage.S) = struct
     let f = functionality store in
     Lwt.pick [l;f] >>= fun suspended ->
     if suspended then store#suspend
-    else begin
-      OS.Sched.shutdown OS.Sched.Poweroff;
-      Lwt.return ()
-    end
+    else store#terminate
 end
