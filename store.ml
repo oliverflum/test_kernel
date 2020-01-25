@@ -107,9 +107,9 @@ class webStore ctx resolver repo uuid password =
         Lwt.return false 
       end
 
-    method private post_store =
+    method private post_store (suspend: bool) =
       let uri = Uri.of_string (repo ^ "/store") in
-      let body_str = self#map_to_json_string in
+      let body_str = self#map_to_json_string suspend in
       let body = Cohttp_lwt.Body.of_string body_str in
       let h1 = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
       let headers = Cohttp.Header.add h1 "Content-Type" "application/json" in
@@ -137,10 +137,11 @@ class webStore ctx resolver repo uuid password =
         Lwt.return false 
       end 
     
-    method private map_to_json_string =
+    method private map_to_json_string (suspend: bool) =
       let js_map = StringMap.map (fun v -> (vtype_to_json v)) map in
       let l = List.of_seq (StringMap.to_seq js_map) in
-      let json = `Assoc [("store", `Assoc l)] in 
+      let json = (if suspend then (`Assoc [("store", `Assoc l)])
+      else (`Assoc [("store", `Assoc l); ("migration_pw", `String password)])) in
       JS.pretty_to_string json
 
     method private store_all (json: Yojson.Basic.t) =
@@ -171,7 +172,7 @@ class webStore ctx resolver repo uuid password =
 
     method suspend = 
       if token <> "" then begin
-        self#post_store >>= fun _ ->
+        self#post_store true >>= fun _ ->
         OS.Sched.shutdown OS.Sched.Poweroff;
         Lwt.return ()
       end else begin
