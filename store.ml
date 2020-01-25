@@ -113,7 +113,6 @@ class webStore ctx resolver repo uuid password =
       let body = Cohttp_lwt.Body.of_string body_str in
       let h1 = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
       let headers = Cohttp.Header.add h1 "Content-Type" "application/json" in
-      Logs.info (fun m -> m "%s" body_str);
       Cohttp_mirage.Client.post ~ctx:store_ctx ~body ~headers uri >>= fun (response, body) ->
       let code = response |> Cohttp.Response.status |> Cohttp.Code.code_of_status in
       if code == 200 then begin
@@ -139,11 +138,15 @@ class webStore ctx resolver repo uuid password =
       end 
     
     method private map_to_json_string (suspend_flag: bool) =
+      if suspend_flag then (Logs.info (fun m -> m "Suspend Post"));
       let js_map = StringMap.map (fun v -> (vtype_to_json v)) map in
       let l = List.of_seq (StringMap.to_seq js_map) in
       let json = (if suspend_flag then (`Assoc [("store", `Assoc l)])
       else (`Assoc [("store", `Assoc l); ("migration_pw", `String password)])) in
-      JS.pretty_to_string json
+      let body_str = JS.pretty_to_string json in 
+      if suspend_flag then (Logs.info (fun m -> m "%s" body_str));
+      body_str
+
 
     method private store_all (json: Yojson.Basic.t) =
       let keys = JS.Util.keys json in
