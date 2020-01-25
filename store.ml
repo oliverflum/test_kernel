@@ -138,15 +138,11 @@ class webStore ctx resolver repo uuid password =
       end 
     
     method private map_to_json_string (suspend_flag: bool) =
-      if suspend_flag then (Logs.info (fun m -> m "Suspend Post"));
       let js_map = StringMap.map (fun v -> (vtype_to_json v)) map in
       let l = List.of_seq (StringMap.to_seq js_map) in
-      let json = (if suspend_flag then (`Assoc [("store", `Assoc l)])
-      else (`Assoc [("store", `Assoc l); ("migration_pw", `String password)])) in
-      let body_str = JS.pretty_to_string json in 
-      if suspend_flag then (Logs.info (fun m -> m "%s" body_str));
-      body_str
-
+      let json = (if suspend_flag then (`Assoc [("store", `Assoc l); ("migration_pw", `String password)])
+      else (`Assoc [("store", `Assoc l)])) in
+      JS.pretty_to_string json
 
     method private store_all (json: Yojson.Basic.t) =
       let keys = JS.Util.keys json in
