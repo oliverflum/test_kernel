@@ -56,7 +56,7 @@ module Main (T: TIME) (RES: Resolver_lwt.S) (CON: Conduit_mirage.S) = struct
   
   let start _time res (ctx:CON.t) =
     let store = new Store.webStore ctx res 
-      (Key_gen.repo ()) (Key_gen.uuid ()) (Key_gen.password ()) in
+      (Key_gen.repo ()) (Key_gen.token ()) in
     store#init >>= fun _ ->
     let l = logic in 
     let f = functionality store in

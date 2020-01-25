@@ -4,18 +4,14 @@ let repo =
   let doc = Key.Arg.info ~doc:"URL restore from" ["repo"] in
   Key.(create "repo" Arg.(opt string "" doc))
 
-let uuid =
-  let doc = Key.Arg.info ~doc:"Kernels UUID in store-repo" ["uuid"] in
-  Key.(create "uuid" Arg.(opt string "0" doc))
-
-let password =
-  let doc = Key.Arg.info ~doc:"Kernels password in store-repo" ["password"] in
-  Key.(create "password" Arg.(opt string "0" doc))
+let token =
+  let doc = Key.Arg.info ~doc:"Kernels token for store-repo auth" ["token"] in
+  Key.(create "token" Arg.(opt string "0" doc))
 
 let main =
   let packages = [ package "cohttp-mirage"; package "duration"; package "yojson" ] in
   foreign
-    ~keys:[Key.abstract repo; Key.abstract uuid; Key.abstract password]
+    ~keys:[Key.abstract repo; Key.abstract token]
     ~packages
     "Unikernel.Main" @@ time @-> resolver @-> conduit @-> job
 
