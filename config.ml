@@ -8,10 +8,14 @@ let token =
   let doc = Key.Arg.info ~doc:"Kernels token for store-repo auth" ["token"] in
   Key.(create "token" Arg.(opt string "" doc))
 
+let migration = 
+  let doc = Key.Arg.info ~doc:"True if kernel shall start and idle" ["migration"] in
+  Key.(create "migration" Arg.(opt bool false doc))
+
 let main =
   let packages = [ package "cohttp-mirage"; package "duration"; package "yojson" ] in
   foreign
-    ~keys:[Key.abstract repo; Key.abstract token]
+    ~keys:[Key.abstract repo; Key.abstract token; Key.abstract migration]
     ~packages
     "Unikernel.Main" @@ time @-> resolver @-> conduit @-> job
 
