@@ -93,7 +93,7 @@ class webStore ctx resolver repo token =
       let body = Cohttp_lwt.Body.of_string body_str in
       let h1 = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
       let headers = Cohttp.Header.add h1 "Content-Type" "application/json" in
-      Cohttp_mirage.Client.post ~ctx:store_ctx ~body ~headers uri >>= fun (response, body) ->
+      Cohttp_mirage.Client.post ~ctx:store_ctx ~body ~headers uri >>= fun (response, _) ->
       let code = response |> Cohttp.Response.status |> Cohttp.Code.code_of_status in
       if code == 200 then begin
         Logs.info (fun m -> m "Wrote store to repo");
@@ -107,7 +107,7 @@ class webStore ctx resolver repo token =
       let uri = Uri.of_string (repo ^ "/unikernel/terminate") in
       let h1 = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
       let headers = Cohttp.Header.add h1 "Content-Type" "application/json" in
-      Cohttp_mirage.Client.post ~ctx:store_ctx ~headers uri >>= fun (response, body) ->
+      Cohttp_mirage.Client.post ~ctx:store_ctx ~headers uri >>= fun (response, _) ->
       let code = response |> Cohttp.Response.status |> Cohttp.Code.code_of_status in
       if code == 200 then begin
         Logs.info (fun m -> m "Terminated self in manager");
@@ -161,10 +161,13 @@ class webStore ctx resolver repo token =
       end
       
     method init =
-      if repo == "" then Lwt.return true
-      else begin 
+      if repo <> "" then begin
         Logs.info (fun m -> m "Using repo: %s" repo);
         self#get_store >>= fun _ ->
         Lwt.return false
+      end
+      else begin 
+        Logs.info (fun m -> m "Not using a repo.");
+        Lwt.return true
       end
   end 

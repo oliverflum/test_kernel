@@ -6,7 +6,7 @@ let repo =
 
 let token =
   let doc = Key.Arg.info ~doc:"Kernels token for store-repo auth" ["token"] in
-  Key.(create "token" Arg.(opt string "0" doc))
+  Key.(create "token" Arg.(opt string "" doc))
 
 let main =
   let packages = [ package "cohttp-mirage"; package "duration"; package "yojson" ] in
