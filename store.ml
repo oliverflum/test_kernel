@@ -128,6 +128,19 @@ module Make (T: Mirage_time.S) = struct
       val token = token
       val mutable map = StringMap.empty
   
+      method private post_ready =
+        let uri = Uri.of_string (repo ^ "/unikernel/ready") in
+        let headers = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
+        Cohttp_mirage.Client.post ~ctx:store_ctx ~headers uri >>= fun (response, _) ->
+        let code = response |> Cohttp.Response.status |> Cohttp.Code.code_of_status in
+        if code == 200 then begin
+          Logs.info (fun m -> m "Notified MirageManager of being ready");
+          Lwt.return true
+        end else begin
+          Logs.info (fun m -> m "Could not notify MirageManager of being ready: %n" code);
+          Lwt.return false 
+        end 
+
       method private get_store =  
         let uri = Uri.of_string (repo ^ "/store") in
         let headers = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
@@ -168,10 +181,10 @@ module Make (T: Mirage_time.S) = struct
         Cohttp_mirage.Client.post ~ctx:store_ctx ~headers uri >>= fun (response, _) ->
         let code = response |> Cohttp.Response.status |> Cohttp.Code.code_of_status in
         if code == 200 then begin
-          Logs.info (fun m -> m "Terminated self in manager");
+          Logs.info (fun m -> m "Notified MirageManager of terminating");
           Lwt.return true
         end else begin
-          Logs.info (fun m -> m "Could not terminate self: %n. Unikernel will be shown alive in Manager" code);
+          Logs.info (fun m -> m "Could not notify MirageManager of temriating %n. Unikernel will be shown alive in Manager" code);
           Lwt.return false 
         end 
       

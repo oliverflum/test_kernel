@@ -1,0 +1,11 @@
+*
+!config.ml
+!store.ml
+!unikernel.ml
+!README.md
+!store.xen
+!store.xl
+!build_kernel.sh
+!static/
+!dhcp/
+!.gitignore
