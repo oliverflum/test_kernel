@@ -235,6 +235,7 @@ module Make (T: Mirage_time.S) = struct
         if repo <> "" then begin
           Logs.info (fun m -> m "Using repo: %s" repo);
           if migration then begin
+            self#post_ready >>= fun _ ->
             steady >>= fun _ -> 
             self#get_store >>= fun _ ->
             Lwt.return true
