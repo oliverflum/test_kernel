@@ -210,6 +210,7 @@ module Make (T: Mirage_time.S) = struct
         map <- StringMap.add key value map
   
       method terminate = 
+        Logs.info (fun m -> m "Terminated");
         if token <> "" then begin
           self#post_terminate >>= fun _ ->
           OS.Sched.shutdown OS.Sched.Poweroff;
@@ -221,6 +222,7 @@ module Make (T: Mirage_time.S) = struct
         end
   
       method suspend = 
+        Logs.info (fun m -> m "Suspended");
         if token <> "" then begin
           self#post_store >>= fun _ ->
           OS.Sched.shutdown OS.Sched.Poweroff;
@@ -232,6 +234,7 @@ module Make (T: Mirage_time.S) = struct
         end
         
       method init (migration: bool) = 
+        Logs.info (fun m -> m "Started");
         if repo <> "" then begin
           Logs.info (fun m -> m "Using repo: %s" repo);
           if migration then begin
