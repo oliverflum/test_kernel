@@ -109,16 +109,17 @@ module Make (T: Mirage_time.S) = struct
   let steady = 
     OS.Xs.make () >>= fun client ->
     let rec inner () = 
-      Logs.info (fun m -> m "Waiting for go");
       poll_xen_store "data" "migrate" client >>= function 
-        | Some _ -> begin
-          Logs.info (fun m -> m "Migration go");
-          Lwt.return true
-          end 
-        | None -> begin 
-          inner ()
-        end
-    in inner ()
+      | Some _ -> begin
+        Logs.info (fun m -> m "Migration go");
+        Lwt.return true
+      end 
+      | None -> begin 
+        inner ()
+      end 
+    in 
+    Logs.info (fun m -> m "Waiting for go");
+    inner ()
   
   class webStore ctx resolver repo token = 
     let ctx = Cohttp_mirage.Client.ctx resolver ctx in
