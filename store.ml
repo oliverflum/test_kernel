@@ -107,9 +107,9 @@ module Make (T: Mirage_time.S) = struct
     in inner ()
 
   let steady = 
-    Logs.info (fun m -> m "Waiting for go");
     OS.Xs.make () >>= fun client ->
     let rec inner () = 
+      Logs.info (fun m -> m "Waiting for go");
       poll_xen_store "data" "migrate" client >>= function 
         | Some _ -> begin
           Logs.info (fun m -> m "Migration go");
