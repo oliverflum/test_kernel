@@ -1,10 +1,11 @@
 open Lwt.Infix
 
-module Main (T: Mirage_time.S) (RES: Resolver_lwt.S) (CON: Conduit_mirage.S) = struct
+module Main (T: Mirage_time.S) (PClock: Mirage_types.PCLOCK) (RES: Resolver_lwt.S) (CON: Conduit_mirage.S) = struct
   
-  module S = Store.Make(T)
+  module S = Store.Make (T) (PClock)
 
   let functionality store = 
+    Logs.info (fun m -> m "Start-TS: %s", (S.time pclock));
     let rec loop = function
       | 200 -> Lwt.return false
       | n ->
@@ -19,14 +20,14 @@ module Main (T: Mirage_time.S) (RES: Resolver_lwt.S) (CON: Conduit_mirage.S) = s
     in
     loop (S.to_int (store#get "count" (S.VInt 0)))
   
-  let start _time res (ctx: CON.t) =
+  let start _time pclock res (ctx: CON.t) =
     let token = Key_gen.token () in
     let repo = Key_gen.repo () in
     let migration = Key_gen.migration () in
     let store = new S.webStore ctx res repo token in
     store#init migration >>= fun _ ->
     let l = S.logic in 
-    let f = functionality store in
+    let f = functionality store pclock in
     Lwt.pick [l;f] >>= fun suspended ->
     if suspended then store#suspend
     else store#terminate

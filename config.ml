@@ -17,11 +17,11 @@ let main =
   foreign
     ~keys:[Key.abstract repo; Key.abstract token; Key.abstract migration]
     ~packages
-    "Unikernel.Main" @@ time @-> resolver @-> conduit @-> job
+    "Unikernel.Main" @@ time @-> pclock @-> resolver @-> conduit @-> job
 
 let () =
   let stack = generic_stackv4 default_network in
   let res_dns = resolver_dns stack in
   let conduit = conduit_direct stack in
-  let job =  [ main $ default_time $ res_dns $ conduit ] in
+  let job =  [ main $ default_time $ default_posix_clock $ res_dns $ conduit ] in
   register "store" job

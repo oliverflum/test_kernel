@@ -5,7 +5,7 @@ exception WrongType of string
 module StringMap = Map.Make(String)
 module JS = Yojson.Basic
 
-module Make (T: Mirage_time.S) = struct 
+module Make (T: Mirage_time.S) (PClock: Mirage_types.PCLOCK) = struct 
   type vtype = 
     | VBool of bool
     | VInt of int
@@ -71,8 +71,13 @@ module Make (T: Mirage_time.S) = struct
       else Lwt.return None
     else 
       Lwt.return None
-    
-  let logic =
+  
+  let time pclock =
+    let clock = PClock.now_d_ps pclock in
+    let time = Ptime.v clock in
+    Ptime.to_rfc3339 time
+
+  let logic pclock =
     OS.Xs.make () >>= fun client ->
     let rec inner () = 
       poll_xen_store "control" "shutdown" client >>= function 
@@ -98,10 +103,13 @@ module Make (T: Mirage_time.S) = struct
           end 
         | None -> Lwt.return false 
       >>= fun suspend ->
-      if suspend then 
-        Lwt.return true
+      if suspend then begin 
+        let tstr = time pclock in
+        Logs.info (fun m -> m "Suspend-TS: %s" tstr);
+        Lwt.return true 
+      end
       else begin
-        T.sleep_ns (Duration.of_sec 1) >>= fun _ ->
+        T.sleep_ns Duration.of_ms 10 >>= fun _ ->
         inner ()
       end
     in inner ()
