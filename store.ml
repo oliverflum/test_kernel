@@ -73,9 +73,10 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
       Lwt.return None
   
   let time pclock =
-    let clock = PClock.now_d_ps pclock in
-    let time = Ptime.v clock in
-    Ptime.to_rfc3339 time
+    PClock.now_d_ps pclock |>
+    Ptime.v |>
+    Ptime.to_float_s |>
+    Float.to_string 
 
   let logic pclock =
     OS.Xs.make () >>= fun client ->
