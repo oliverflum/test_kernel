@@ -5,7 +5,7 @@ exception WrongType of string
 module StringMap = Map.Make(String)
 module JS = Yojson.Basic
 
-module Make (T: Mirage_time.S) (PClock: Mirage_types.PCLOCK) = struct 
+module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct 
   type vtype = 
     | VBool of bool
     | VInt of int
@@ -109,7 +109,7 @@ module Make (T: Mirage_time.S) (PClock: Mirage_types.PCLOCK) = struct
         Lwt.return true 
       end
       else begin
-        T.sleep_ns Duration.of_ms 10 >>= fun _ ->
+        TIME.sleep_ns (Duration.of_ms 10) >>= fun _ ->
         inner ()
       end
     in inner ()
