@@ -80,28 +80,17 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
   let logic pclock =
     OS.Xs.make () >>= fun client ->
     let rec inner () = 
-      poll_xen_store "control" "shutdown" client >>= function 
+      begin poll_xen_store "control" "shutdown" client >>= function 
         | Some msg -> begin
           Logs.info (fun m -> m "Got control message: %s" msg);
           match msg with
             | "suspend" -> 
               Lwt.return true
-            | "poweroff" -> 
-              OS.Sched.shutdown OS.Sched.Poweroff;
-              Lwt.return false (* Doesn't get here! *)
-            | "reboot" ->
-              OS.Sched.shutdown OS.Sched.Reboot;
-              Lwt.return false (* Doesn't get here! *)
-            | "halt" ->
-              OS.Sched.shutdown OS.Sched.Poweroff;
-              Lwt.return false
-            | "crash" ->
-              OS.Sched.shutdown OS.Sched.Crash;
-              Lwt.return false
             | _ -> 
               Lwt.return false
           end 
         | None -> Lwt.return false 
+      end
       >>= fun suspend ->
       if suspend then begin 
         let tstr = time pclock in
@@ -115,6 +104,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
     in inner ()
 
   let steady = 
+    Logs.info (fun m -> m "Waiting for go");
     OS.Xs.make () >>= fun client ->
     let rec inner () = 
       poll_xen_store "data" "migrate" client >>= function 
@@ -126,7 +116,6 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
         inner ()
       end 
     in 
-    Logs.info (fun m -> m "Waiting for go");
     inner ()
   
   class webStore ctx resolver repo token = 
