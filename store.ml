@@ -111,7 +111,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
       poll_xen_store "data" "migrate" client >>= function 
       | Some _ -> begin
         let tstr = time pclock in
-        Logs.info (fun m -> m "Suspend-TS: %s" tstr);
+        Logs.info (fun m -> m "go-TS: %s" tstr);
         Lwt.return true
       end 
       | None -> begin 
@@ -141,14 +141,15 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
           Lwt.return false 
         end 
 
-      method private get_store =  
+      method private get_store pclock =  
         let uri = Uri.of_string (repo ^ "/store") in
         let headers = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
         Cohttp_mirage.Client.get ~ctx:store_ctx ~headers uri >>= fun (response, body) ->
         let code = response |> Cohttp.Response.status |> Cohttp.Code.code_of_status in
         Cohttp_lwt.Body.to_string body >>= fun body_str ->
         if code == 200 then begin
-          Logs.info (fun m -> m "Got store: %s" body_str);
+          let tstr = time pclock in
+          Logs.info (fun m -> m "Got store: %s at %s" body_str tstr);
           let json = JS.from_string body_str in 
           let store = JS.Util.member "store" json in
           self#store_all store;
@@ -158,7 +159,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
           Lwt.return false 
         end
   
-      method private post_store =
+      method private post_store pclock =
         let uri = Uri.of_string (repo ^ "/store") in
         let body_str = self#map_to_json_string in
         let body = Cohttp_lwt.Body.of_string body_str in
@@ -167,7 +168,8 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
         Cohttp_mirage.Client.post ~ctx:store_ctx ~body ~headers uri >>= fun (response, _) ->
         let code = response |> Cohttp.Response.status |> Cohttp.Code.code_of_status in
         if code == 200 then begin
-          Logs.info (fun m -> m "Wrote store to repo");
+          let tstr = time pclock in
+          Logs.info (fun m -> m "Wrote store to repo at %s" tstr);
           Lwt.return true
         end else begin
           Logs.info (fun m -> m "Could not write store: %n" code);
@@ -221,10 +223,10 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
           Lwt.return ()
         end
   
-      method suspend = 
+      method suspend pclock = 
         Logs.info (fun m -> m "Suspended");
         if token <> "" then begin
-          self#post_store >>= fun _ ->
+          self#post_store pclock >>= fun _ ->
           OS.Sched.shutdown OS.Sched.Poweroff;
           Lwt.return ()
         end else begin
@@ -240,10 +242,10 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
           if migration then begin
             self#post_ready >>= fun _ ->
             steady pclock >>= fun _ -> 
-            self#get_store >>= fun _ ->
+            self#get_store pclock >>= fun _ ->
             Lwt.return true
           end else begin
-            self#get_store >>= fun _ ->
+            self#get_store pclock >>= fun _ ->
             Lwt.return true
           end
         end

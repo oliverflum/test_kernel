@@ -32,6 +32,6 @@ module Main (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) (RES: Resolver_l
     let l = S.logic pclock in 
     let f = functionality store pclock in
     Lwt.pick [l;f] >>= fun suspended ->
-    if suspended then store#suspend
+    if suspended then store#suspend pclock
     else store#terminate
 end
