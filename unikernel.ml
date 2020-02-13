@@ -22,6 +22,8 @@ module Main (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) (RES: Resolver_l
     loop (S.to_int (store#get "count" (S.VInt 0)))
   
   let start _time pclock res (ctx: CON.t) =
+    let tstr = S.time pclock in
+    Logs.info (fun m -> m "Start-TS: %s" tstr);
     let token = Key_gen.token () in
     let repo = Key_gen.repo () in
     let migration = Key_gen.migration () in

@@ -20,5 +20,5 @@ sudo xl create ./store.xl -c 'extra="repo=<repo-uri> token=<kernel-uuid> migrati
 
 To build a Unikernel to be ready for MirageManager run the build script with
 ´´´
-./build_scriot.sh
+./build_script.sh
 ```
