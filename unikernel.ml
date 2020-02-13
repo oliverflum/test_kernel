@@ -6,7 +6,7 @@ module Main (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) (RES: Resolver_l
 
   let functionality store pclock = 
     let tstr = S.time pclock in
-    Logs.info (fun m -> m "Start-TS: %s" tstr);
+    Logs.info (fun m -> m "functionality-TS: %s" tstr);
     let rec loop = function
       | 200 -> Lwt.return false
       | n ->
@@ -23,12 +23,12 @@ module Main (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) (RES: Resolver_l
   
   let start _time pclock res (ctx: CON.t) =
     let tstr = S.time pclock in
-    Logs.info (fun m -> m "Start-TS: %s" tstr);
+    Logs.info (fun m -> m "start-TS: %s" tstr);
     let token = Key_gen.token () in
     let repo = Key_gen.repo () in
     let migration = Key_gen.migration () in
     let store = new S.webStore ctx res repo token in
-    store#init migration >>= fun _ ->
+    store#init migration pclock >>= fun _ ->
     let l = S.logic pclock in 
     let f = functionality store pclock in
     Lwt.pick [l;f] >>= fun suspended ->

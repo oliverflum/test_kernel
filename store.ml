@@ -104,13 +104,14 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
       end
     in inner ()
 
-  let steady = 
+  let steady pclock = 
     Logs.info (fun m -> m "Waiting for go");
     OS.Xs.make () >>= fun client ->
     let rec inner () = 
       poll_xen_store "data" "migrate" client >>= function 
       | Some _ -> begin
-        Logs.info (fun m -> m "Migration go");
+        let tstr = time pclock in
+        Logs.info (fun m -> m "Suspend-TS: %s" tstr);
         Lwt.return true
       end 
       | None -> begin 
@@ -232,13 +233,13 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
           Lwt.return ()
         end
         
-      method init (migration: bool) = 
+      method init (migration: bool) pclock = 
         Logs.info (fun m -> m "Started");
         if repo <> "" then begin
           Logs.info (fun m -> m "Using repo: %s" repo);
           if migration then begin
             self#post_ready >>= fun _ ->
-            steady >>= fun _ -> 
+            steady pclock >>= fun _ -> 
             self#get_store >>= fun _ ->
             Lwt.return true
           end else begin
