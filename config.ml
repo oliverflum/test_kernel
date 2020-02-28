@@ -12,10 +12,18 @@ let migration =
   let doc = Key.Arg.info ~doc:"True if kernel shall start and idle" ["migration"] in
   Key.(create "migration" Arg.(opt bool false doc))
 
+let id = 
+  let doc = Key.Arg.info ~doc:"True if kernel shall start and idle" ["id"] in
+  Key.(create "id" Arg.(opt string "" doc))
+
+let host_name = 
+  let doc = Key.Arg.info ~doc:"True if kernel shall start and idle" ["host_name"] in
+  Key.(create "host_name" Arg.(opt string "" doc))
+
 let main =
   let packages = [ package "cohttp-mirage"; package "duration"; package "yojson" ] in
   foreign
-    ~keys:[Key.abstract repo; Key.abstract token; Key.abstract migration]
+    ~keys:[Key.abstract repo; Key.abstract token; Key.abstract migration; Key.abstract id; Key.abstract host_name]
     ~packages
     "Unikernel.Main" @@ time @-> pclock @-> resolver @-> conduit @-> job
 
