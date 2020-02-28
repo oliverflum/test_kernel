@@ -146,7 +146,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
       val mutable map = StringMap.empty
   
       method private post_ready =
-        let path = "/host/"^host_name^"/unikernels/"^id^"/ready" in
+        let path = "/hosts/"^host_name^"/unikernels/"^id^"/ready" in
         let uri = Uri.of_string (repo ^ path) in
         let headers = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
         Cohttp_mirage.Client.post ~ctx:store_ctx ~headers uri >>= fun (response, _) ->
@@ -160,7 +160,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
         end 
 
       method private get_store pclock =
-        let path = "/host/"^host_name^"/unikernels/"^id^"/stores/latest" in
+        let path = "/hosts/"^host_name^"/unikernels/"^id^"/stores/latest" in
         let uri = Uri.of_string (repo ^ path) in
         let headers = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
         Cohttp_mirage.Client.get ~ctx:store_ctx ~headers uri >>= fun (response, body) ->
@@ -179,7 +179,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
         end
   
       method private post_store pclock status =
-        let path = "/host/"^host_name^"/unikernels/"^id^"/stores" in
+        let path = "/hosts/"^host_name^"/unikernels/"^id^"/stores" in
         let uri = Uri.of_string (repo ^ path) in
         let body_str = self#create_store_body status in
         let body = Cohttp_lwt.Body.of_string body_str in
@@ -197,7 +197,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
         end 
       
       method private post_terminate =
-        let path = "/host/"^host_name^"/unikernels/"^id^"/ready" in
+        let path = "/hosts/"^host_name^"/unikernels/"^id^"/ready" in
         let uri = Uri.of_string (repo ^ path) in
         let h1 = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
         let headers = Cohttp.Header.add h1 "Content-Type" "application/json" in
