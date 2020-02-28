@@ -18,7 +18,7 @@ let id =
 
 let host_name = 
   let doc = Key.Arg.info ~doc:"True if kernel shall start and idle" ["host_name"] in
-  Key.(create "host_name" Arg.(opt string "" doc))
+  Key.(create "host_id" Arg.(opt string "" doc))
 
 let main =
   let packages = [ package "cohttp-mirage"; package "duration"; package "yojson" ] in

@@ -135,18 +135,18 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
     in 
     inner ()
   
-  class webStore ctx resolver repo token id host_name = 
+  class webStore ctx resolver repo token id host_id = 
     let ctx = Cohttp_mirage.Client.ctx resolver ctx in
     object (self)
       val store_ctx = ctx
       val repo = repo
       val token = token
       val id = id
-      val host_name = host_name
+      val host_id = host_id
       val mutable map = StringMap.empty
   
       method private post_ready =
-        let path = "/hosts/"^host_name^"/unikernels/"^id^"/ready" in
+        let path = "/hosts/"^host_id^"/unikernels/"^id^"/ready" in
         let uri = Uri.of_string (repo ^ path) in
         let headers = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
         Cohttp_mirage.Client.post ~ctx:store_ctx ~headers uri >>= fun (response, _) ->
@@ -160,7 +160,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
         end 
 
       method private get_store pclock =
-        let path = "/hosts/"^host_name^"/unikernels/"^id^"/stores/latest" in
+        let path = "/hosts/"^host_id^"/unikernels/"^id^"/stores/latest" in
         let uri = Uri.of_string (repo ^ path) in
         let headers = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
         Cohttp_mirage.Client.get ~ctx:store_ctx ~headers uri >>= fun (response, body) ->
@@ -179,7 +179,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
         end
   
       method private post_store pclock status =
-        let path = "/hosts/"^host_name^"/unikernels/"^id^"/stores" in
+        let path = "/hosts/"^host_id^"/unikernels/"^id^"/stores" in
         let uri = Uri.of_string (repo ^ path) in
         let body_str = self#create_store_body status in
         let body = Cohttp_lwt.Body.of_string body_str in
@@ -197,7 +197,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
         end 
       
       method private post_terminate =
-        let path = "/hosts/"^host_name^"/unikernels/"^id^"/ready" in
+        let path = "/hosts/"^host_id^"/unikernels/"^id^"/ready" in
         let uri = Uri.of_string (repo ^ path) in
         let h1 = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
         let headers = Cohttp.Header.add h1 "Content-Type" "application/json" in

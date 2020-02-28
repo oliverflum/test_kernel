@@ -28,8 +28,8 @@ module Main (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) (RES: Resolver_l
     let repo = Key_gen.repo () in
     let migration = Key_gen.migration () in
     let id = Key_gen.id () in
-    let host_name = Key_gen.host_name () in
-    let store = new S.webStore ctx res repo token id host_name in
+    let host_id = Key_gen.host_id () in
+    let store = new S.webStore ctx res repo token id host_id in
     store#init migration pclock >>= fun _ ->
     let l = S.logic pclock in 
     let f = functionality store pclock in
