@@ -250,7 +250,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
           Lwt.return ()
         end
   
-      method suspend pclock status = 
+      method suspend pclock status =
         Logs.info (fun m -> m "Suspended");
         if token <> "" then begin
           self#post_store pclock status >>= fun _ ->
@@ -262,7 +262,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
           Lwt.return ()
         end
         
-      method init (migration: bool) pclock = 
+      method init (migration: bool) pclock =
         Logs.info (fun m -> m "Started");
         if repo <> "" then begin
           Logs.info (fun m -> m "Using repo: %s" repo);
