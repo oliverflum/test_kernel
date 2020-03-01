@@ -197,7 +197,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
         end 
       
       method private post_terminate =
-        let path = "/hosts/"^host_id^"/unikernels/"^id^"/ready" in
+        let path = "/hosts/"^host_id^"/unikernels/"^id^"/terminate" in
         let uri = Uri.of_string (repo ^ path) in
         let h1 = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
         let headers = Cohttp.Header.add h1 "Content-Type" "application/json" in
