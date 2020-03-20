@@ -92,18 +92,21 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
     Ptime.to_float_s |>
     Float.to_string 
 
+  let read_shutdown_value client =
+    poll_xen_store "control" "shutdown" client >>= function 
+    | Some msg -> begin
+      Logs.info (fun m -> m "Got control message: %s" msg);
+      match msg with
+        | "suspend" -> Lwt.return Suspend
+        | "migrate" -> Lwt.return Migrate
+        | _ -> Lwt.return Resume
+      end 
+    | None -> Lwt.return Resume
+
   let logic pclock =
     OS.Xs.make () >>= fun client ->
     let rec inner () = 
-      poll_xen_store "control" "shutdown" client >>= function 
-        | Some msg -> begin
-          Logs.info (fun m -> m "Got control message: %s" msg);
-          match msg with
-            | "suspend" -> Lwt.return Suspend
-            | "migrate" -> Lwt.return Migrate
-            | _ -> Lwt.return Resume
-          end 
-        | None -> Lwt.return Resume
+      read_shutdown_value client
       >>= fun status -> begin 
         match status with
           | Resume -> begin
@@ -118,6 +121,10 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
           end
         end
     in inner()
+
+  let check_control_status =
+    OS.Xs.make () >>= fun client ->
+    read_shutdown_value client
 
   let steady pclock = 
     Logs.info (fun m -> m "Waiting for go");
@@ -160,7 +167,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
         end 
 
       method private get_store pclock =
-        let path = "/hosts/"^host_id^"/unikernels/"^id^"/stores/latest" in
+        let path = "/hosts/"^host_id^"/unikernels/"^id^"/states/latest" in
         let uri = Uri.of_string (repo ^ path) in
         let headers = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
         Cohttp_mirage.Client.get ~ctx:store_ctx ~headers uri >>= fun (response, body) ->
@@ -168,20 +175,20 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
         Cohttp_lwt.Body.to_string body >>= fun body_str ->
         if code == 200 then begin
           let tstr = time pclock in
-          Logs.info (fun m -> m "Got store: %s at %s" body_str tstr);
+          Logs.info (fun m -> m "Got state: %s at %s" body_str tstr);
           let json = JS.from_string body_str in 
-          let store = JS.Util.member "store" json in
-          self#store_all store;
+          let state = JS.Util.member "state" json in
+          self#store_all state;
           Lwt.return true
         end else begin
-          Logs.info (fun m -> m "Could not retrieve store: %n" code);
+          Logs.info (fun m -> m "Could not retrieve state: %n" code);
           Lwt.return false 
         end
   
       method private post_store pclock status =
-        let path = "/hosts/"^host_id^"/unikernels/"^id^"/stores" in
+        let path = "/hosts/"^host_id^"/unikernels/"^id^"/states" in
         let uri = Uri.of_string (repo ^ path) in
-        let body_str = self#create_store_body status in
+        let body_str = self#create_state_body status in
         let body = Cohttp_lwt.Body.of_string body_str in
         let h1 = Cohttp.Header.init_with "Authorization" ("Bearer " ^ token) in
         let headers = Cohttp.Header.add h1 "Content-Type" "application/json" in
@@ -189,10 +196,10 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
         let code = response |> Cohttp.Response.status |> Cohttp.Code.code_of_status in
         if code == 200 then begin
           let tstr = time pclock in
-          Logs.info (fun m -> m "Wrote store to repo at %s" tstr);
+          Logs.info (fun m -> m "Wrote state to repo at %s" tstr);
           Lwt.return true
         end else begin
-          Logs.info (fun m -> m "Could not write store: %n" code);
+          Logs.info (fun m -> m "Could not write state: %n" code);
           Lwt.return false 
         end 
       
@@ -211,10 +218,10 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
           Lwt.return false 
         end
       
-      method private create_store_body status =
+      method private create_state_body status =
         let js_map = StringMap.map (fun v -> (vtype_to_json v)) map in
         let l = List.of_seq (StringMap.to_seq js_map) in
-        let keys =  [("store", `Assoc l)] in
+        let keys =  [("state", `Assoc l)] in
         let keys = match status with 
           | Suspend -> ("action", `String "suspend") :: keys 
           | Migrate -> ("action", `String "migrate") :: keys  
