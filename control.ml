@@ -34,7 +34,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
     Ptime.to_float_s |>
     Float.to_string 
 
-  let read_shutdown_value client =
+  let read_shutdown_value (client: OS.Xs.client) =
     poll_xen_store "control" "shutdown" client >>= function 
     | Some msg -> begin
       Logs.info (fun m -> m "Got control message: %s" msg);
@@ -63,10 +63,6 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
           end
         end
     in inner()
-
-  let check_control_status =
-    OS.Xs.make () >>= fun client ->
-    read_shutdown_value client
 
   let steady () =
     Logs.info (fun m -> m "Waiting for go");
