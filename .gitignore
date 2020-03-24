@@ -2,6 +2,7 @@
 !config.ml
 !store.ml
 !unikernel.ml
+!control.ml
 !README.md
 !store.xen
 !store.xl
