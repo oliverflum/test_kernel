@@ -7,16 +7,17 @@ module Main (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) (RES: Resolver_l
   module C = Control.Make (TIME) (PClock)
 
   let functionality store = 
-    let tstr = C.time in
+    let tstr = C.time () in
     Logs.info (fun m -> m "functionality-TS: %s" tstr);
     let rec loop = function
       | 200 -> Lwt.return Control.Status.Terminate
       | n ->
+        let tstr = C.time () in
         if n = 0 
-          then 
-            Logs.info (fun m -> m "HELLO... (%i)" n)
-          else 
-            Logs.info (fun m -> m "AGAIN (%i)" n);
+        then
+          Logs.info (fun m -> m "%s: HELLO... (%i)" tstr n)
+        else
+          Logs.info (fun m -> m "%s: AGAIN (%i)" tstr n);
         store#set "count" (S.VInt (n+1));
         TIME.sleep_ns (Duration.of_sec 1) >>= fun () ->
         loop (S.to_int (store#get "count" (S.VInt 0))) 
@@ -24,7 +25,7 @@ module Main (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) (RES: Resolver_l
     loop (S.to_int (store#get "count" (S.VInt 0)))
   
   let start _time _pclock res (ctx: CON.t) =
-    let tstr = C.time in
+    let tstr = C.time () in
     Logs.info (fun m -> m "start-TS: %s" tstr);
     let token = Key_gen.token () in
     let repo = Key_gen.repo () in
@@ -32,7 +33,7 @@ module Main (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) (RES: Resolver_l
     let id = Key_gen.id () in
     let host_id = Key_gen.hostid () in
     let store = new S.webStore ctx res repo token id host_id in
-    let time = C.time in 
+    let time = C.time () in 
     store#init time migration (C.steady) >>= fun _ ->
     let l = C.main_loop in
     let f = functionality store in

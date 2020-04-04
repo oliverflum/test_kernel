@@ -28,7 +28,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
   else 
     Lwt.return None
 
-  let time =
+  let time () =
     PClock.now_d_ps () |>
     Ptime.v |>
     Ptime.to_float_s |>
@@ -57,7 +57,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
             end
           | _ -> begin
             let astr = Status.string_of_status status in
-            let tstr = time in
+            let tstr = time () in
             Logs.info (fun m -> m "%s-TS: %s" astr tstr);
             Lwt.return status
           end
@@ -70,7 +70,7 @@ module Make (TIME: Mirage_time.S) (PClock: Mirage_clock.PCLOCK) = struct
     let rec inner = fun () ->
       poll_xen_store "data" "migrate" client >>= function
       | Some _ -> begin
-        let tstr = time in
+        let tstr = time () in
         Logs.info (fun m -> m "go-TS: %s" tstr);
         Lwt.return true
       end
